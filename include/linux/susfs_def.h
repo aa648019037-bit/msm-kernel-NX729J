@@ -3,12 +3,12 @@
  * SUSFS — 内核级 root 隐藏。上游项目 SUSFS4KSU：
  *         https://gitlab.com/simonpunk/susfs4ksu
  *
- * 来源: 上游 kernel_patches/include/linux/susfs_def.h，对应版本 SUSFS_VERSION "v2.2.0"
- *       （版本号定义见 include/linux/susfs.h）。
+ * 来源: 上游 kernel_patches/include/linux/susfs_def.h，对应版本 SUSFS_VERSION "v2.3.0"
+ *       （分支 gki-android13-5.15，提交 0b5f967；版本号定义见 include/linux/susfs.h）。
  * 许可: GPL-3.0。上游仓库根 LICENSE 为 GPLv3 全文；上游未在源文件内
  *       逐文件声明，此处按 GPL-3.0-only 处理。
  * 改动: 有。为适配本内核树（5.15 与配套 KernelSU 的 SUSFS 接口）作过
- *       修改，与上游 v2.2.0 并非逐字一致，差异见本仓库提交历史。
+ *       修改，与上游 v2.3.0 并非逐字一致，差异见本仓库提交历史。
  * 注意: 本内核树整体为 GPL-2.0-only（仓库根 COPYING），与 GPL-3.0
  *       互不兼容；此处如实标注上游许可，不代表合并分发在法律上成立。
  */
@@ -16,6 +16,7 @@
 #define KSU_SUSFS_DEF_H
 
 #include <linux/bits.h>
+#include <linux/bitmap.h>
 #include <linux/string.h>
 
 /********/
@@ -46,6 +47,7 @@
 #define CMD_SUSFS_SUS_SU 0x60000 /* deprecated */
 #define CMD_SUSFS_ENABLE_AVC_LOG_SPOOFING 0x60010
 #define CMD_SUSFS_ADD_SUS_MAP 0x60020
+#define CMD_SUSFS_SET_PRIORITY_UID_FILTER 0x60030
 
 #define SUSFS_MAX_LEN_PATHNAME 256 // 256 should address many paths already unless you are doing some strange experimental stuff, then set your own desired length
 #define SUSFS_FAKE_CMDLINE_OR_BOOTCONFIG_SIZE 8192 // 8192 is enough I guess
@@ -56,24 +58,26 @@
 #define TRY_UMOUNT_DEFAULT 0 /* used by susfs_try_umount() */
 #define TRY_UMOUNT_DETACH 1 /* used by susfs_try_umount() */
 
-#define VFSMOUNT_MNT_FLAGS_KSU_UNSHARED_MNT 0x80000000 /* used for mounts that are unshared by ksu process */
 #define DEFAULT_KSU_MNT_ID 2000000000 /* used for mounts created or single cloned by ksu process */
 #define DEFAULT_KSU_MNT_GROUP_ID 200000 /* used by mount->mnt_group_id */
+#define DEFAULT_KSU_MNT_MINOR_DEV (1 << 12) /* should be way enough, here minor(dev) begins with 4097 */
 
 #ifndef FUSE_SUPER_MAGIC
 #define FUSE_SUPER_MAGIC 0x65735546
 #endif
+
 /*
- * inode->i_mapping->flags => A 'unsigned long' type storing flag 'AS_FLAGS_', bit 1 to 31 is not usable since 6.12
+ * mnt->mnt.mnt_flags => An 'int' primitive storing flag 'VFSMOUNT_MNT_FLAGS_'
+ * task_struct->thread_info.flags => storing flag 'TIF_' which is an unsigned long primitive :D
+ * inode->i_mapping->flags => An 'unsigned long' primitive storing flag 'AS_FLAGS_', bit 1 to 31 is not usable since 6.12
  * nd->state => storing flag 'ND_STATE_'
  * nd->flags => storing flag 'ND_FLAGS_'
- * task_struct->thread_info.flags => storing flag 'TIF_'
+ * statx request_mark => storing flag 'STATX_'
  */
- // thread_info->flags is unsigned long :D
+
+#define VFSMOUNT_MNT_FLAGS_KSU_UNSHARED_MNT 0x80000000 /* used for mounts that are unshared by ksu process */
+
 #define TIF_PROC_UMOUNTED 33
-/* 以下两位与上游 susfs4ksu 对齐（其 susfs_def.h 同为 33/34/35），
- * 供新版 KernelSU(4437) 的 CONFIG_KSU_SUSFS 集成使用。
- * 注意 TIF_PROC_NO_SU 与 TIF_PROC_UMOUNTED 是**两个不同的 flag**，不可互相别名。 */
 #define TIF_PROC_NO_SU 34
 #define TIF_PROC_UMOUNTED_FOR_ZYGOTE_NEXT 35
 
@@ -85,9 +89,23 @@
 
 #define ND_STATE_LOOKUP_LAST 32
 #define ND_STATE_OPEN_LAST 64
-#define ND_FLAGS_LOOKUP_LAST		0x2000000
- 
-#define MAGIC_MOUNT_WORKDIR "/debug_ramdisk/workdir"
+#define ND_FLAGS_LOOKUP_LAST 0x2000000
+
+#define STATX_SUS_KSTAT 0x10000000U
+#define STATX_SUS_KSTAT_FUSE 0x20000000U
+
+/*****************************************/
+/* getpriority uid filter (bitmap)       */
+/*****************************************/
+/* The uids that are hidden from the apps that abuse the getpriority syscall
+ * to find out the existing uids. Only the uids within the app uid range
+ * (10000 - 19999) are supported.
+ */
+#define SUSFS_PRIORITY_UID_FILTER_MIN_UID 10000
+#define SUSFS_PRIORITY_UID_FILTER_MAX_UID 19999
+#define SUSFS_PRIORITY_UID_FILTER_UID_NUM (SUSFS_PRIORITY_UID_FILTER_MAX_UID - SUSFS_PRIORITY_UID_FILTER_MIN_UID + 1)
+#define SUSFS_PRIORITY_UID_FILTER_BITMAP_LEN BITS_TO_LONGS(SUSFS_PRIORITY_UID_FILTER_UID_NUM)
+#define SUSFS_APP_STR_BUF_SIZE 65535
 
 static inline bool susfs_starts_with(const char *str, const char *prefix) {
     while (*prefix) {
@@ -112,6 +130,10 @@ static inline bool susfs_ends_with(const char *str, const char *suffix) {
 	return !strcmp(str + str_len - suffix_len, suffix);
 }
 
+static inline bool susfs_is_current_app_uid(void) {
+	return ((current_uid().val % 100000) >= 10000);
+}
+
 static inline bool susfs_is_current_proc_umounted(void) {
 	return (likely(test_thread_flag(TIF_PROC_UMOUNTED)));
 }
@@ -122,19 +144,6 @@ static inline void susfs_set_current_proc_umounted(void) {
 
 static inline void susfs_clear_current_proc_umounted(void) {
 	clear_thread_flag(TIF_PROC_UMOUNTED);
-}
-
-/* ---- 上游同名接口：新版 KernelSU 的 sucompat.h 直接引用这些名字 ---- */
-static inline bool susfs_is_current_proc_no_su(void) {
-	return (likely(test_thread_flag(TIF_PROC_NO_SU)));
-}
-
-static inline void susfs_set_current_proc_no_su(void) {
-	set_thread_flag(TIF_PROC_NO_SU);
-}
-
-static inline void susfs_clear_current_proc_no_su(void) {
-	clear_thread_flag(TIF_PROC_NO_SU);
 }
 
 static inline bool susfs_is_current_proc_umounted_for_zygote_next(void) {
@@ -152,6 +161,18 @@ static inline void susfs_clear_current_proc_umounted_for_zygote_next(void) {
 static inline bool susfs_is_current_proc_umounted_app(void) {
 	return (likely(test_thread_flag(TIF_PROC_UMOUNTED)) &&
 			current_uid().val >= 10000);
+}
+
+static inline bool susfs_is_current_proc_no_su(void) {
+	return (likely(test_thread_flag(TIF_PROC_NO_SU)));
+}
+
+static inline void susfs_set_current_proc_no_su(void) {
+	set_thread_flag(TIF_PROC_NO_SU);
+}
+
+static inline void susfs_clear_current_proc_no_su(void) {
+	clear_thread_flag(TIF_PROC_NO_SU);
 }
 
 #define SUSFS_IS_INODE_SUS_MAP(inode) \
