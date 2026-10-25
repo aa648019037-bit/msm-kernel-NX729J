@@ -3,12 +3,12 @@
  * SUSFS — 内核级 root 隐藏。上游项目 SUSFS4KSU：
  *         https://gitlab.com/simonpunk/susfs4ksu
  *
- * 来源: 上游 kernel_patches/include/linux/susfs.h，对应版本 SUSFS_VERSION "v2.2.0"
- *       （版本号定义见 include/linux/susfs.h）。
+ * 来源: 上游 kernel_patches/include/linux/susfs.h，对应版本 SUSFS_VERSION "v2.3.0"
+ *       （分支 gki-android13-5.15，提交 0b5f967；版本号定义见 include/linux/susfs.h）。
  * 许可: GPL-3.0。上游仓库根 LICENSE 为 GPLv3 全文；上游未在源文件内
  *       逐文件声明，此处按 GPL-3.0-only 处理。
  * 改动: 有。为适配本内核树（5.15 与配套 KernelSU 的 SUSFS 接口）作过
- *       修改，与上游 v2.2.0 并非逐字一致，差异见本仓库提交历史。
+ *       修改，与上游 v2.3.0 并非逐字一致，差异见本仓库提交历史。
  * 注意: 本内核树整体为 GPL-2.0-only（仓库根 COPYING），与 GPL-3.0
  *       互不兼容；此处如实标注上游许可，不代表合并分发在法律上成立。
  */
@@ -23,7 +23,7 @@
 #include <linux/susfs_def.h>
 #include <linux/statfs.h>
 
-#define SUSFS_VERSION "v2.2.0"
+#define SUSFS_VERSION "v2.3.0"
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5,0,0)
 #define SUSFS_VARIANT "NON-GKI"
 #else
@@ -82,13 +82,13 @@ struct st_susfs_hide_sus_mnts_for_non_su_procs {
 #define KSTAT_SPOOF_ATIME_TV_NSEC (1 << 5)
 #define KSTAT_SPOOF_MTIME_TV_SEC (1 << 6)
 #define KSTAT_SPOOF_MTIME_TV_NSEC (1 << 7)
-#define KSTAT_SPOOF_CTIME_TV_SEC (1 < 8)
+#define KSTAT_SPOOF_CTIME_TV_SEC (1 << 8)
 #define KSTAT_SPOOF_CTIME_TV_NSEC (1 << 9)
 #define KSTAT_SPOOF_BLOCKS (1 << 10)
 #define KSTAT_SPOOF_BLKSIZE (1 << 11)
 
 struct st_susfs_sus_kstat {
-	int                                     is_statically;
+	bool                                    is_statically;
 	unsigned long                           target_ino;
 	char                                    target_pathname[SUSFS_MAX_LEN_PATHNAME];
 	unsigned long                           spoofed_ino;
@@ -108,11 +108,13 @@ struct st_susfs_sus_kstat {
 };
 
 struct st_susfs_sus_kstat_hlist {
+	struct hlist_node                       node;
 	unsigned long                           target_ino;
 	unsigned long                           target_dev;
+	struct kstatfs                          spoofed_kstatfs;
+	int                                     spoofed_mnt_id;
 	bool                                    is_fuse;
 	struct st_susfs_sus_kstat               info;
-	struct hlist_node                       node;
 };
 #endif
 
@@ -151,6 +153,7 @@ struct st_susfs_open_redirect {
 };
 
 struct st_susfs_open_redirect_hlist {
+	struct hlist_node                       node;
 	unsigned long                           target_ino;
 	unsigned long                           target_dev;
 	unsigned long                           redirected_ino;
@@ -159,7 +162,6 @@ struct st_susfs_open_redirect_hlist {
 	struct kstatfs                          spoofed_kstatfs;
 	struct st_susfs_open_redirect           info;
 	bool                                    reversed_lookup_only;
-	struct hlist_node                       node;
 };
 #endif
 
@@ -170,6 +172,12 @@ struct st_susfs_sus_map {
 	int                                     err;
 };
 #endif
+
+/* getpriority uid filter */
+struct st_susfs_priority_uid_filter {
+	char                                    app_strings[SUSFS_APP_STR_BUF_SIZE];
+	int                                     err;
+};
 
 /* avc log spoofing */
 struct st_susfs_avc_log_spoofing {
@@ -240,6 +248,10 @@ void susfs_add_open_redirect(void __user **user_info);
 #ifdef CONFIG_KSU_SUSFS_SUS_MAP
 void susfs_add_sus_map(void __user **user_info);
 #endif
+
+/* getpriority uid filter */
+void susfs_set_priority_uid_filter(void __user **user_info);
+void susfs_parse_priority_app_strings(void);
 
 void susfs_set_avc_log_spoofing(void __user **user_info);
 
