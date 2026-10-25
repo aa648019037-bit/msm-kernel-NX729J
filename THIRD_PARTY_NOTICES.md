@@ -42,10 +42,11 @@
 ## 2. SUSFS（`fs/susfs.c`、`include/linux/susfs.h`、`include/linux/susfs_def.h`）
 
 - **来源**：SUSFS4KSU — https://gitlab.com/simonpunk/susfs4ksu
-- **版本**：`SUSFS_VERSION "v2.2.0"`（定义在 `include/linux/susfs.h`）
+- **版本**：`SUSFS_VERSION "v2.3.0"`（定义在 `include/linux/susfs.h`；
+  对应上游分支 `gki-android13-5.15` 提交 `0b5f967`）
 - **许可证**：GPL-3.0
 - **改动**：**有**。为适配本内核树（5.15 与配套 KernelSU 的 SUSFS 接口）作过修改，
-  与上游 v2.2.0 并非逐字一致，差异见提交历史。
+  与上游 v2.3.0 并非逐字一致，差异见提交历史。
 
 由 `CONFIG_KSU_SUSFS` 接入（`fs/Makefile`）；三份源文件顶部均带来源与许可头。
 
