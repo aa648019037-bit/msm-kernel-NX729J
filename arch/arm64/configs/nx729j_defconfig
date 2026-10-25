@@ -6966,3 +6966,7 @@ CONFIG_KSU_SUSFS_SUS_MAP=y
 CONFIG_BBG=y
 # CONFIG_BBG_BLOCK_BOOT is not set
 CONFIG_BBG_BLOCK_RECOVERY=y
+
+# --- Droidspaces 7.0.0: NAT66 (--net=nat 的 IPv6) 与 macvlan 网络模式 (--net=macvlan) ---
+CONFIG_IP6_NF_TARGET_MASQUERADE=y
+CONFIG_MACVLAN=y
