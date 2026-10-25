@@ -176,3 +176,6 @@ arch/arm64/configs/vendor/nubia
 arch/arm64/configs/vendor/NX729J_diff.config
 arch/arm64/configs/vendor/NX729J-perf_diff.config
 arch/arm64/configs/vendor/NX729J_driveronly.config
+
+# KernelSU(BakaSU) 源码：不随仓库分发，构建前克隆到 KernelSU/（见 README「构建方式二」第 2 步）
+/KernelSU/

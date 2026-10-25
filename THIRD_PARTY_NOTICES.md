@@ -3,16 +3,19 @@
 本仓库 `aumt/msm-kernel-NX729J` 是在 Android Common Kernel 之上叠加改动的内核树。
 内核主体与仓库根 `COPYING` 一致：`GPL-2.0 WITH Linux-syscall-note`（即 GPL-2.0-only）。
 
-下列第三方代码以内嵌副本形式随内核树分发，本文件记录其来源与许可证。
+下列第三方代码的来源与许可证记录如下。其中 KernelSU 源码**不随本仓库分发**（构建时从上游克隆），其余仍以内嵌副本形式随内核树分发。
 （预编译的 KernelSU 管理器 App 不在本仓库内，不属本文件范围。）
 
 ---
 
 ## 1. KernelSU（`KernelSU/`）
 
-- **来源**：ReSukiSU 分支 — https://github.com/ReSukiSU/ReSukiSU
-- **版本**：`KSU_VERSION = 35137`（对应上游 `git rev-list --count HEAD = 4437`）
-- **改动**：无。`KernelSU/` 是上游副本，本仓库未修改其内容。
+- **来源**：BakaSU 分支 — https://github.com/Baka-SU/BakaSU
+- **分发方式**：**不随本仓库分发**。`KernelSU/` 已列入 `.gitignore`；云编译由 workflow 自动克隆，
+  本地编译见 README「构建方式二」第 2 步。
+- **版本**：由克隆下来的 `KernelSU/.git` 现算 —— `KSU_VERSION = 30000 + git rev-list --count HEAD + 700`，
+  与 BakaSU 管理器同一口径。（末次随仓库分发的那份副本是 `4489` ⇒ `35189`，对应 `83850e8e` / `v4.2.0-rc3`。）
+- **改动**：无。本仓库不改动上游源码。
 
 ### 为什么这里有两份 LICENSE
 
@@ -21,17 +24,18 @@
 | `KernelSU/LICENSE` | GPL-3.0 | `3972dc9744f6499f` | 逐字节相同 |
 | `KernelSU/kernel/LICENSE` | GPL-2.0 | `f9c375a1be4a41f7` | 逐字节相同 |
 
-两份并存是**上游自己的安排**，不是本仓库放错了文件：
+下面两份文件都在克隆下来的 `KernelSU/` 里（不在本仓库中），本仓库既不合并也不改动它们。
+两份并存是**上游自己的安排**，不是放错了文件：
 
 - `KernelSU/kernel/LICENSE`（GPL-2.0）覆盖内核态模块部分，即 `KernelSU/kernel/`
-  下的代码 —— 本仓库编译并分发的正是这一部分。
+  下的代码 —— 本仓库编译（并随内核镜像分发）的正是这一部分。
 - `KernelSU/LICENSE`（GPL-3.0）覆盖上游仓库的其余部分（管理器 App、脚本、文档），
   那些内容**不在本仓库内**。
 
-两份均按上游原样保留，未作改动。
+两份均由上游原样提供，本仓库未作改动。
 
 > 附注：同源的 `SukiSU-Ultra/SukiSU-Ultra` 已把 `kernel/LICENSE` 换成另一份文本
-> （sha256 `8177f975…`），与本仓库不同 —— 本仓库对应的是 **ReSukiSU**。
+> （sha256 `8177f975…`），与本仓库不同 —— 本仓库对应的是 **BakaSU**。
 
 ---
 

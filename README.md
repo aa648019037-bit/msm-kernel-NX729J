@@ -1,6 +1,6 @@
 # 红魔 8S Pro (NX729J) 通用内核
 
-> 红魔 8S Pro (**NX729J**, **SM8550 / kalama**, **GKI 2.0**) 自定义内核，按内核版本分为多个分支（见下方「分支说明」）。内核版本串默认由 git 派生（`5.15.x-g<提交号>`），需要与手机固件串**逐字一致**时用 `custom_version` 指定（`vendor_dlkm` vermagic 匹配，可正常加载原厂内核模块）。集成 **KernelSU (ReSukiSU 分支)** 与 SUSFS 等特性，支持 GitHub Actions 云编译与 Linux 服务器本地编译两种方式。
+> 红魔 8S Pro (**NX729J**, **SM8550 / kalama**, **GKI 2.0**) 自定义内核，按内核版本分为多个分支（见下方「分支说明」）。内核版本串默认由 git 派生（`5.15.x-g<提交号>`），需要与手机固件串**逐字一致**时用 `custom_version` 指定（`vendor_dlkm` vermagic 匹配，可正常加载原厂内核模块）。集成 **KernelSU (BakaSU 分支)** 与 SUSFS 等特性，支持 GitHub Actions 云编译与 Linux 服务器本地编译两种方式。
 
 ---
 
@@ -38,7 +38,7 @@
 
 > ⚠️ **关闭某些开关有副作用面**（如 `enable_ebpf` 关掉后 daed 无法运行，`enable_droidspaces` 影响容器应用），默认均开启，如非必要请保持默认。
 
-**Always-on**：KernelSU（ReSukiSU 分支，内核级 root，不受开关控制）。
+**Always-on**：KernelSU（BakaSU 分支，内核级 root，不受开关控制）。
 
 ---
 
@@ -49,7 +49,7 @@
 - 刷写内核**有风险**，可能导致无法开机、WIFI/指纹/基带异常等。
 - 刷写前务必备份 `boot` 分区（TWRP 或 Android 工具箱）。
 - 刷入后如遇问题，请回刷官方 `boot.img`。
-- 首次使用内核级 root（KernelSU/SUSFS）请安装对应管理器：**ReSukiSU 管理器** 见 [ReSukiSU_CI](https://github.com/cctv18/ReSukiSU_CI/releases)。
+- 首次使用内核级 root（KernelSU/SUSFS）请安装对应管理器：**BakaSU 管理器** 见 [BakaSU](https://github.com/Baka-SU/BakaSU/releases)。
 
 ---
 
@@ -66,13 +66,14 @@
    | `kernel_version` | 四选一：`5.15.41`（官方树）/ `5.15.104`（ACK 重建树，RedMagicOS 9.0.11MR）/ `5.15.144`（ACK 重建树，移植版 HyperOS 4）/ `5.15.167`（c5 重建树） |
    | `ccache_update` | 源码/配置变更后开启，强制重建缓存（一般保持关闭） |
    | `package_ak3` | 打包 AnyKernel3 刷机包（默认开启） |
+   | `bakasu_ref` | **KernelSU(BakaSU) 源码版本**，留空 = 拉上游 `main` tip（**每次构建都取最新**）。想钉住版本填 tag / 提交号 / versionCode（如 `35193`）。 |
    | `custom_version` | **自定义完整版本串**，留空则用 git 派生串（`5.15.x-g<提交号>`）。系统 OTA 更新后固件版本串变化但内核版本号（如 5.15.167）没变时，用它对齐 `vendor_dlkm`。**获取方法见文末附录**。 |
    | `enable_susfs` / `enable_lz4` / `enable_network` / `enable_bbbrutal` / `enable_droidspaces` / `enable_bbg` / `enable_ebpf` | 各功能开关，见上方特性表 |
    | `create_release` | 构建成功后自动创建 GitHub Release（默认开启） |
 
 4. **等待构建**（约 40–60 分钟，二次构建因 ccache 缓存约 15–30 分钟）。
 5. 构建成功后：
-   - 若 `create_release` 开启 → 在 **Releases** 页下载 `AnyKernel3-NX729J-<内核实际版本串>-ReSukiSU.zip` 刷机包（版本串直接从编出的 Image 里抽取，与 Release 标题同口径）；
+   - 若 `create_release` 开启 → 在 **Releases** 页下载 `AnyKernel3-NX729J-<内核实际版本串>-BakaSU.zip` 刷机包（版本串直接从编出的 Image 里抽取，与 Release 标题同口径）；
    - 或到本次运行 **Summary** 页的 **Artifacts** 下载 `Image` / `compiled.config` / 刷机包。
 6. **刷机**：见下方「刷机」小节。
 
@@ -106,6 +107,34 @@ git checkout nx729j-5.15.104        # 5.15.104 ACK 树（与 RedMagicOS 9.0.11MR
 # 或 git checkout nx729j-5.15.167   # 5.15.167 c5 重建树
 # 或 git checkout nx729j-5.15.41    # 5.15.41 官方树（默认分支）
 ```
+
+#### 克隆 KernelSU 源码（必需）
+
+`KernelSU/` **不随仓库分发**（已列入 `.gitignore`），本地编译前必须自己克隆进来，
+否则 `drivers/kernelsu` 这个软链指向空目录、`CONFIG_KSU` 一项就编不过：
+
+```bash
+git clone https://github.com/Baka-SU/BakaSU KernelSU
+git -C KernelSU checkout main          # 跟随上游最新；要钉死版本就换成某个 tag / 提交号
+```
+
+> **为什么目录叫 `KernelSU/`，装的却是 BakaSU 的代码？**
+>
+> `KernelSU` 是这类内核级 root 驱动的通用叫法（源头是 [tiann/KernelSU](https://github.com/tiann/KernelSU)），
+> BakaSU 是它的上游衍生分支（前身 ReSukiSU）。内核树整套命名都沿用这一套：源码目录 `KernelSU/`、
+> 软链 `drivers/kernelsu`、配置符号 `CONFIG_KSU_*`、内核对象 `kernelsu.ko` —— 这些名字都被内核侧接线
+> （`drivers/Makefile`、`drivers/Kconfig`、软链指向、`Kbuild` 的 `KSU_SRC`）引用死了，改名要连内核侧一起动，
+> 收益只是名字好看，所以保持原样。
+>
+> **目录里的内容是 100% 的 [Baka-SU/BakaSU](https://github.com/Baka-SU/BakaSU)，不含任何 tiann/KernelSU 的代码。**
+> 看到 `KernelSU`、`KSU`、`kernelsu` 这些字样时，指的都是「这类驱动 / 这个目录 / 这套符号」，不是那个上游项目。
+
+- **版本号是从 `.git` 现算的**：`KSU_VERSION = 30000 + git rev-list --count HEAD + 700`，
+  与云编译、BakaSU 管理器同一口径。克隆里只要有 `.git`（`KernelSU/kernel/Kbuild` 的
+  `LOCAL_GIT_EXISTS` 就是查这个），每次编译都会按当前提交数重新算，不会读到写死的数。
+- 想升级：`git -C KernelSU pull` 后再编；想固定在某个版本：`git -C KernelSU checkout <tag或提交>`。
+- 云编译不用手动做这步 —— 工作流每次都自己克隆（`bakasu_ref` 留空 = 上游最新）。
+- 编译日志里会有 `-- BakaSU version code: <数字>` 一行，那就是本次编进内核的版本号。
 
 ### 3. 准备 clang（二选一）
 
@@ -205,7 +234,7 @@ sed -i 's|^write_boot;|flash_boot; # 仅替换内核, 跳过 ramdisk 重打包|'
 
 # 打包（文件名用 Image 里的实际版本串，与云端同口径）
 VER=$(strings -a ../out/arch/arm64/boot/Image | grep -oE '5\.15\.[0-9]+(-[A-Za-z0-9._-]+)?' | sort -u | awk 'length > max { max = length; best = $0 } END { print best }')
-zip -r9 "../AnyKernel3-NX729J-$VER-ReSukiSU.zip" ./* -x '*.git*'
+zip -r9 "../AnyKernel3-NX729J-$VER-BakaSU.zip" ./* -x '*.git*'
 cd ..
 ls -lh AnyKernel3-NX729J-*.zip
 ```
@@ -266,7 +295,7 @@ ls -lh AnyKernel3-NX729J-*.zip
 
 **内核特性**
 
-- [KernelSU](https://github.com/tiann/KernelSU) / [ReSukiSU](https://github.com/ReSukiSU/ReSukiSU) — 内核级 root（本仓库内嵌 ReSukiSU 分支）
+- [KernelSU](https://github.com/tiann/KernelSU) / [BakaSU](https://github.com/Baka-SU/BakaSU) — 内核级 root（源码不随仓库分发：云编译每次拉上游最新，本地编译前需自行克隆，见「构建方式二」第 2 步）
 - [SUSFS4KSU](https://gitlab.com/simonpunk/susfs4ksu) — 内核级隐藏
 - **Baseband-guard**（Github@showdo）— 防格基带保护 LSM
 - **Brutal** — TCP 拥塞控制算法（`net/ipv4/brutal.c`）
@@ -280,7 +309,7 @@ ls -lh AnyKernel3-NX729J-*.zip
 
 **管理器**
 
-- [ReSukiSU_CI](https://github.com/cctv18/ReSukiSU_CI) — ReSukiSU 管理器的构建与发布
+- [BakaSU](https://github.com/Baka-SU/BakaSU/releases) — BakaSU 管理器的构建与发布
 
 各第三方代码的具体来源、版本与许可证，见 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)。
 
