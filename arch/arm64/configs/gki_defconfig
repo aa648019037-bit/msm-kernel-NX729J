@@ -734,9 +734,9 @@ CONFIG_IP_SET_HASH_IP=y
 CONFIG_IP_SET_HASH_NET=y
 CONFIG_NETFILTER_XT_SET=y
 
-# KernelSU (ReSukiSU, drivers/kernelsu -> KernelSU/kernel)
+# KernelSU (BakaSU, drivers/kernelsu -> KernelSU/kernel)
 CONFIG_KSU=y
-CONFIG_KSU_FULL_NAME_FORMAT="ReSukiSU-5.15-NX729J"
+CONFIG_KSU_FULL_NAME_FORMAT="BakaSU-5.15-NX729J"
 
 # === NX729J feature integration: 网络功能增强 (ipset 全系列 + IPv6 NAT) ===
 CONFIG_IP_SET=y
@@ -769,7 +769,7 @@ CONFIG_TCP_CONG_BRUTAL=y
 CONFIG_DEFAULT_CUBIC=y
 # === NX729J feature integration: ZRAM LZ4 ===
 CONFIG_ZRAM_DEF_COMP_LZ4=y
-# === NX729J feature integration: SUSFS (ReSukiSU 内置 Inline Hook) ===
+# === NX729J feature integration: SUSFS (BakaSU 内置 Inline Hook) ===
 CONFIG_KSU_SUSFS=y
 CONFIG_KSU_SUSFS_SUS_PATH=y
 CONFIG_KSU_SUSFS_SUS_MOUNT=y

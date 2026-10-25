@@ -168,3 +168,6 @@ arch/*/boot/dts/vendor
 
 # Documentation toolchain
 sphinx_*/
+
+# KernelSU(BakaSU) 源码：不随仓库分发，构建前克隆到 KernelSU/（见 README「构建方式二」第 2 步）
+/KernelSU/
