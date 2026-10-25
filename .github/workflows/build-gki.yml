@@ -431,6 +431,10 @@ jobs:
 
       - name: 安装依赖 + 下载 AOSP clang
         run: |
+          # runner 镜像自带的 apt 索引可能比镜像源旧：索引里的版本号已被下架时会直接 404
+          # （2026-10-25 就是这样栽在 liblzma-dev_5.6.1+really5.4.5-1ubuntu0.3 上，
+          #   构建连第一步都没过去）。先 update 刷新索引，再装。
+          sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             binutils python-is-python3 libssl-dev libelf-dev libdw-dev bc dwarves ccache zip unzip
           # clang-r450784d = android13-5.15 时代 clang-14（与 build.config.constants 里 pin 的 r450784e 同族，
