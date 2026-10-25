@@ -78,7 +78,7 @@ on:
         type: boolean
         default: 'true'
       enable_droidspaces:
-        description: 'Droidspaces 容器支持(SYSVIPC/命名空间)'
+        description: 'Droidspaces 容器支持(SYSVIPC/命名空间/macvlan)'
         required: true
         type: boolean
         default: 'true'
@@ -561,9 +561,9 @@ jobs:
           DISABLE=""
           if [ "${{ inputs.enable_susfs }}" = "false" ]; then DISABLE="$DISABLE KSU_SUSFS"; fi
           if [ "${{ inputs.enable_lz4 }}" = "false" ]; then DISABLE="$DISABLE ZRAM_DEF_COMP_LZ4"; fi
-          if [ "${{ inputs.enable_network }}" = "false" ]; then DISABLE="$DISABLE IP_SET IP6_NF_NAT"; fi
+          if [ "${{ inputs.enable_network }}" = "false" ]; then DISABLE="$DISABLE IP_SET IP6_NF_NAT IP6_NF_TARGET_MASQUERADE"; fi
           if [ "${{ inputs.enable_bbbrutal }}" = "false" ]; then DISABLE="$DISABLE TCP_CONG_BBR TCP_CONG_BRUTAL"; fi
-          if [ "${{ inputs.enable_droidspaces }}" = "false" ]; then DISABLE="$DISABLE SYSVIPC POSIX_MQUEUE IPC_NS USER_NS"; fi
+          if [ "${{ inputs.enable_droidspaces }}" = "false" ]; then DISABLE="$DISABLE SYSVIPC POSIX_MQUEUE IPC_NS USER_NS MACVLAN"; fi
           if [ "${{ inputs.enable_bbg }}" = "false" ]; then DISABLE="$DISABLE BBG"; fi
           if [ "${{ inputs.enable_ebpf }}" = "false" ]; then DISABLE="$DISABLE BPF_SYSCALL BPF_JIT BPF_JIT_ALWAYS_ON DEBUG_INFO_BTF IKHEADERS"; fi
           if [ -n "$DISABLE" ]; then
