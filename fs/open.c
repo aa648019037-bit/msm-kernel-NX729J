@@ -399,8 +399,7 @@ static const struct cred *access_override_creds(void)
 #ifdef CONFIG_KSU_SUSFS
 extern struct static_key_true ksu_su_compat_enabled;
 extern bool __ksu_is_allow_uid_for_current(uid_t uid);
-extern int ksu_handle_faccessat(int *dfd, struct filename **filename, int *mode,
-			int *flags);
+extern int ksu_handle_faccessat(int *dfd, struct filename **filename, int *mode, int *__unused_flags);
 #endif
 
 static long do_faccessat(int dfd, const char __user *filename, int mode, int flags)
@@ -433,12 +432,9 @@ static long do_faccessat(int dfd, const char __user *filename, int mode, int fla
 
 retry:
 #ifdef CONFIG_KSU_SUSFS
-	/* 新版 KernelSU 的 SUSFS 变体要求传入真实 struct filename 并**就地改写**
-	 * (*filename)->name，随后必须用 filename_lookup() 查该结构体（而非用户指针）。
-	 * 形态逐字对齐上游 susfs4ksu 的 fs/open.c 补丁。 */
 	fname = getname_flags(filename, lookup_flags, NULL);
 
-	if (likely(susfs_is_current_proc_umounted()))
+	if (likely(susfs_is_current_proc_no_su()))
 		goto orig_flow;
 
 	if (static_branch_likely(&ksu_su_compat_enabled)) {
